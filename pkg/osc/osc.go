@@ -25,7 +25,7 @@ var (
 
 const (
 	sep   = "\u2500"
-	arrow = "\u2BC8"
+	arrow = "\u2192"
 )
 
 // List shows the current sensuctl config and all OSC profiles

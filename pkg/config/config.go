@@ -36,17 +36,6 @@ type Backend struct {
 	Profile
 }
 
-// OSConfig format
-type OSConfig struct {
-	Name      string
-	Env       string
-	Username  string
-	Password  string
-	API       string
-	Namespace string
-	Format    string
-}
-
 // Create generates new sensuctl cluster/profile configs
 func Create(c Cluster, server string) error {
 
@@ -79,8 +68,9 @@ func Create(c Cluster, server string) error {
 // ReadSensuConfig loads the current sensuctl config and returns a config.Backend{}
 func ReadSensuConfig() Backend {
 
+	home, _ := homedir.Dir()
 	// read in config, ignore errors for now
-	currentConfig, _ := os.Open("/home/myles/.config/sensu/sensuctl/cluster")
+	currentConfig, _ := os.Open(home + "/.config/sensu/sensuctl/cluster")
 	defer currentConfig.Close()
 	data, _ := ioutil.ReadAll(currentConfig)
 	var showConfig Cluster
@@ -88,7 +78,7 @@ func ReadSensuConfig() Backend {
 	json.Unmarshal(data, &showConfig)
 
 	// read in profile
-	currentProfile, _ := os.Open("/home/myles/.config/sensu/sensuctl/profile")
+	currentProfile, _ := os.Open(home + "/.config/sensu/sensuctl/profile")
 	defer currentProfile.Close()
 
 	data, _ = ioutil.ReadAll(currentProfile)
