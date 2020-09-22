@@ -2,7 +2,9 @@ package osc
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,11 +18,12 @@ import (
 )
 
 var (
-	server   string
-	api      string
-	username string
-	password string
-	insecure bool
+	server        string
+	api           string
+	username      string
+	password      string
+	insecure      bool
+	trustedcafile string
 )
 
 const (
@@ -76,6 +79,7 @@ func Connect(args []string) {
 	username = viper.GetString(server + ".username")
 	password = viper.GetString(server + ".password")
 	insecure = viper.GetBool(server + ".insecure-skip-tls-verify")
+	trustedcafile = viper.GetString(server + ".trusted-ca-file")
 
 	if viper.GetString(server+".api") == "" {
 		fmt.Printf("Config profile (%s) does not exist.\n", server)
@@ -93,6 +97,48 @@ func Connect(args []string) {
 			},
 		}
 		client.Transport = tr
+	}
+	if trustedcafile != "" {
+		file, err := os.Open(trustedcafile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		certData, err := ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Printf("Unable to load trusted-ca-file: %s", err)
+			return
+		}
+		block, _ := pem.Decode(certData)
+		if block == nil {
+			fmt.Println("Unable to decode trusted-ca-file.  Is it in PEM format?")
+			return
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			fmt.Printf("Invalid trusted-ca-file: %v", err)
+			return
+		}
+		if !cert.IsCA {
+			fmt.Println("Certificate in trusted-ca-file is not a CA")
+			return
+		}
+		rootCAs, err := x509.SystemCertPool()
+		if err != nil {
+			fmt.Printf("Failed to get System Cert Pool: %v", err)
+			rootCAs = x509.NewCertPool()
+		}
+		rootCAs.AddCert(cert)
+		if client.Transport == nil {
+			client.Transport = new(http.Transport)
+		}
+		if transport, ok := client.Transport.(*http.Transport); ok {
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = new(tls.Config)
+			}
+			transport.TLSClientConfig.RootCAs = rootCAs
+		}
+
 	}
 
 	isValid := backendAuth(client)
