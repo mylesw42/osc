@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -16,12 +17,13 @@ const (
 
 // Cluster sensuctl format
 type Cluster struct {
-	APIUrl                string `json:"api-url"`
-	TrustedCAFile         string `json:"trusted-ca-file"`
-	InsecureSkipTLSVerify bool   `json:"insecure-skip-tls-verify"`
-	AccessToken           string `json:"access_token"`
-	ExpiresAt             int    `json:"expires_at"`
-	RefreshToken          string `json:"refresh_token"`
+	APIUrl                string        `json:"api-url"`
+	TrustedCAFile         string        `json:"trusted-ca-file"`
+	InsecureSkipTLSVerify bool          `json:"insecure-skip-tls-verify"`
+	AccessToken           string        `json:"access_token"`
+	ExpiresAt             int           `json:"expires_at"`
+	RefreshToken          string        `json:"refresh_token"`
+	Timeout               time.Duration `json:'timeout"`
 }
 
 // Profile sensuctl format
@@ -40,6 +42,18 @@ type Backend struct {
 func Create(c Cluster, server string) error {
 
 	c.APIUrl = viper.GetString(server + ".api")
+
+	// run through optional parameters
+	if viper.IsSet(server + ".trusted-ca-file") {
+		c.TrustedCAFile = viper.GetString(server + ".trusted-ca-file")
+	}
+	if viper.IsSet(server + ".timeout") {
+		c.Timeout = viper.GetDuration(server + ".timeout")
+	}
+	if viper.IsSet(server + ".insecure-skip-tls-verify") {
+		c.InsecureSkipTLSVerify = viper.GetBool(server + ".insecure-skip-tls-verify")
+	}
+
 	newCluster, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err

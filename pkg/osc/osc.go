@@ -68,14 +68,14 @@ func List() {
 	}
 }
 
-// Connect establishes a new sensuctl config for the chosen backend
+// Connect establishes a new sensuctl config for the chosen backend profile
 func Connect(args []string) {
 
 	server = args[0]
 	api = viper.GetString(server + ".api")
 	username = viper.GetString(server + ".username")
 	password = viper.GetString(server + ".password")
-	insecure = viper.GetBool(server + ".insecure")
+	insecure = viper.GetBool(server + ".insecure-skip-tls-verify")
 
 	if viper.GetString(server+".api") == "" {
 		fmt.Printf("Config profile (%s) does not exist.\n", server)

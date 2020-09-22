@@ -22,9 +22,11 @@ localhost:
   username: admin
   password: P@ssw0rd!
   api: http://localhost:8080
+  trusted-ca-file: "/path/to/trust-ca.pem"
   namespace: default
   format: tabular
-  insecure: false
+  insecure-skip-tls-verify: false
+  timeout: 15s
 
 localhost-ssl:
   env: dev
@@ -33,7 +35,7 @@ localhost-ssl:
   api: https://localhost:8080
   namespace: foo
   format: json
-  insecure: true
+  insecure-skip-tls-verify: true
 ```
 
 ## Commands
