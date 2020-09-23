@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	sensuctlClusterFile = "~/.config/sensu/sensuctl/cluster"
-	sensuctlProfileFile = "~/.config/sensu/sensuctl/profile"
+	sensuctlClusterFile                  = "~/.config/sensu/sensuctl/cluster"
+	sensuctlProfileFile                  = "~/.config/sensu/sensuctl/profile"
+	sensuctlDefaultTimeout time.Duration = 15 * time.Second
 )
 
 // Cluster sensuctl format
@@ -49,6 +50,8 @@ func Create(c Cluster, server string) error {
 	}
 	if viper.IsSet(server + ".timeout") {
 		c.Timeout = viper.GetDuration(server + ".timeout")
+	} else {
+		c.Timeout = sensuctlDefaultTimeout
 	}
 	if viper.IsSet(server + ".insecure-skip-tls-verify") {
 		c.InsecureSkipTLSVerify = viper.GetBool(server + ".insecure-skip-tls-verify")
