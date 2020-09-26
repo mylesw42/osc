@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	sensuctlClusterFile                  = "~/.config/sensu/sensuctl/cluster"
-	sensuctlProfileFile                  = "~/.config/sensu/sensuctl/profile"
-	sensuctlDefaultTimeout time.Duration = 15 * time.Second
+	sensuctlClusterFile                    = "~/.config/sensu/sensuctl/cluster"
+	sensuctlProfileFile                    = "~/.config/sensu/sensuctl/profile"
+	sensuctlDefaultFormat                  = "tabular"
+	sensuctlDefaultNamespace               = "default"
+	sensuctlDefaultTimeout   time.Duration = 15 * time.Second
 )
 
 // Cluster sensuctl format
@@ -40,24 +42,9 @@ type Backend struct {
 }
 
 // Create generates new sensuctl cluster/profile configs
-func Create(c Cluster, server string) error {
+func Create(c Cluster, profile string) error {
 
-	c.APIUrl = viper.GetString(server + ".api")
-
-	// run through optional parameters
-	if viper.IsSet(server + ".trusted-ca-file") {
-		c.TrustedCAFile = viper.GetString(server + ".trusted-ca-file")
-	}
-	if viper.IsSet(server + ".timeout") {
-		c.Timeout = viper.GetDuration(server + ".timeout")
-	} else {
-		c.Timeout = sensuctlDefaultTimeout
-	}
-	if viper.IsSet(server + ".insecure-skip-tls-verify") {
-		c.InsecureSkipTLSVerify = viper.GetBool(server + ".insecure-skip-tls-verify")
-	}
-
-	newCluster, err := json.MarshalIndent(c, "", "  ")
+	newCluster, err := newClusterConfig(c, profile)
 	if err != nil {
 		return err
 	}
@@ -66,11 +53,7 @@ func Create(c Cluster, server string) error {
 		return err
 	}
 
-	tmpProfile := Profile{
-		Format:    viper.GetString(server + ".format"),
-		Namespace: viper.GetString(server + ".namespace"),
-	}
-	newProfile, err := json.MarshalIndent(tmpProfile, "", "  ")
+	newProfile, err := newProfileConfig(profile)
 	if err != nil {
 		return err
 	}
@@ -80,6 +63,55 @@ func Create(c Cluster, server string) error {
 	}
 
 	return nil
+}
+
+func newClusterConfig(c Cluster, profile string) ([]byte, error) {
+	c.APIUrl = viper.GetString(profile + ".api")
+
+	// run through optional parameters
+	if viper.IsSet(profile + ".trusted-ca-file") {
+		c.TrustedCAFile = viper.GetString(profile + ".trusted-ca-file")
+	}
+	if viper.IsSet(profile + ".timeout") {
+		c.Timeout = viper.GetDuration(profile + ".timeout")
+	} else {
+		c.Timeout = sensuctlDefaultTimeout
+	}
+	if viper.IsSet(profile + ".insecure-skip-tls-verify") {
+		c.InsecureSkipTLSVerify = viper.GetBool(profile + ".insecure-skip-tls-verify")
+	}
+
+	newCluster, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	return newCluster, nil
+}
+
+func newProfileConfig(profile string) ([]byte, error) {
+
+	format := viper.GetString(profile + ".format")
+	namespace := viper.GetString(profile + ".namespace")
+
+	// apply default if not present in config
+	if format == "" {
+		format = sensuctlDefaultFormat
+	}
+	if namespace == "" {
+		namespace = sensuctlDefaultNamespace
+	}
+
+	tmpProfile := Profile{
+		Format:    format,
+		Namespace: namespace,
+	}
+
+	newProfile, err := json.MarshalIndent(tmpProfile, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return newProfile, nil
 }
 
 // ReadSensuConfig loads the current sensuctl config and returns a config.Backend{}

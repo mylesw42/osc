@@ -12,7 +12,7 @@ Multiple profiles can be setup for a single backend, in case you need a differen
 
 OSC could also be used in a CI/CD pipeline to perform actions on multiple clusters. An `osc.config.yaml` can also be read from the current working directory.
 
-## Configuration
+# Configuration
 
 ```yaml
 ---
@@ -20,7 +20,8 @@ OSC could also be used in a CI/CD pipeline to perform actions on multiple cluste
 localhost:
   env: dev
   username: admin
-  password: P@ssw0rd!
+  password: ""
+  interactive: true
   api: http://localhost:8080
   trusted-ca-file: "/path/to/trust-ca.pem"
   namespace: default
@@ -36,9 +37,32 @@ localhost-ssl:
   namespace: foo
   format: json
   insecure-skip-tls-verify: true
+
+localhost-min:
+  username: admin
+  password: P@ssw0rd!
+  api: https://localhost:8080
 ```
 
-## Commands
+## Required profile parameters *
+A minimum config profile requires 3 settings:
+
+- "api"
+- "username"
+- "password" *** (If "interactive" is set to true on the profile, this setting is optional) ***
+
+## Optional profile parameters
+A profile in the OSC config contains a number of optional parameters. If a parameter is not present, the default value will be used.
+
+- "timeout". (Default: 15s)
+- "env" (Default: no value)
+- "trusted-ca-file" (Default: no value)
+- "namespace" (Default: "default")
+- "format" (Default: "tabular")
+- "insecure-skip-tls-verify" (Default: false)
+- "interactive" (Default: false)
+
+# Commands
 
 Once your configuration file is in place, switching between Sensu backend clusters is a breeze.
 
@@ -62,7 +86,7 @@ Flags:
 Use "osc [command] --help" for more information about a command.
 ```
 
-### List
+## List
 
 List will show you the currentl sensuctl cluster/profile settings, along with the list of available profiles in your OSC config.
 
@@ -81,12 +105,21 @@ localhost       dev             admin           default         tabular         
 localhost-ssl   dev             admin           foo             json            https://localhost:8080
 ```
 
-### Connect
+## Connect
 
 Connect takes 1 argument, the profile `name` in the config. It creates a new sensuctl configuration for you. No need to type in the API, username/password, namespace, format preferences anymore. Woo Hoo!
 
-`> osc connect localhost`
+```bash
+osc connect localhost
+Connected to Sensu backend: localhost (http://localhost:8080)
+```
+
+## Connect (interactive)
+
+If a profile has interactive set to true, OSC will prompt the user for the password associated with that profile username.
 
 ```bash
-Connected to Sensu backend: localhost (http://localhost:8080)
+osc connect localhost-auth
+? Password for admin: *********
+Connected to Sensu backend: localhost-auth (http://localhost:8080)
 ```

@@ -14,15 +14,17 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/viper"
 )
 
 var (
-	server        string
+	profile       string
 	api           string
 	username      string
 	password      string
 	insecure      bool
+	interactive   bool
 	trustedcafile string
 )
 
@@ -74,16 +76,18 @@ func List() {
 // Connect establishes a new sensuctl config for the chosen backend profile
 func Connect(args []string) {
 
-	server = args[0]
-	api = viper.GetString(server + ".api")
-	username = viper.GetString(server + ".username")
-	password = viper.GetString(server + ".password")
-	insecure = viper.GetBool(server + ".insecure-skip-tls-verify")
-	trustedcafile = viper.GetString(server + ".trusted-ca-file")
+	profile := args[0]
+	interactive = viper.GetBool(profile + ".interactive")
 
-	if viper.GetString(server+".api") == "" {
-		fmt.Printf("Config profile (%s) does not exist.\n", server)
+	validProfile := validateProfile(profile)
+
+	if !validProfile {
+		fmt.Printf("Config profile (%s) is missing required parameters.", profile)
 		os.Exit(1)
+	}
+
+	if interactive {
+		passwordPrompt()
 	}
 
 	// create the http client
@@ -148,12 +152,12 @@ func Connect(args []string) {
 			fmt.Println(err)
 			return
 		}
-		err = config.Create(newConfig, server)
+		err = config.Create(newConfig, profile)
 		if err != nil {
 			fmt.Printf("Error connecting: %s\n", err)
 			return
 		}
-		fmt.Printf("Connected to Sensu backend: %s (%s)\n", server, api)
+		fmt.Printf("Connected to Sensu backend: %s (%s)\n", profile, api)
 	} else {
 		fmt.Println("Auth failed! Check profile credentials.")
 		os.Exit(1)
@@ -204,6 +208,38 @@ func backendToken(c http.Client) (config.Cluster, error) {
 	defer resp.Body.Close()
 
 	return respConfig, nil
+}
+
+// passwordPrompt asks for a password
+func passwordPrompt() {
+	prompt := &survey.Password{
+		Message: "Password for " + username + ":",
+	}
+	survey.AskOne(prompt, &password)
+}
+
+// validateProfile ensures a minimum set of profile config settings are set
+func validateProfile(profile string) bool {
+	api = viper.GetString(profile + ".api")
+	username = viper.GetString(profile + ".username")
+	password = viper.GetString(profile + ".password")
+	insecure = viper.GetBool(profile + ".insecure-skip-tls-verify")
+	trustedcafile = viper.GetString(profile + ".trusted-ca-file")
+
+	if api == "" {
+		fmt.Println("api is required")
+		return false
+	}
+	if username == "" {
+		fmt.Println("username is required")
+		return false
+	}
+	if !interactive && password == "" {
+		fmt.Println("password is required")
+		return false
+	}
+
+	return true
 }
 
 // frmt returns a unicode separator the length of the provided string
